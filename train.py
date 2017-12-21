@@ -2,15 +2,13 @@
 
 import os
 
-os.environ["CUDA_VISIBLE_DEVICES"] = ""
-
 import numpy as np
-
 import tensorflow as tf
 from tensorflow.contrib import slim
 
 from gomoku import engine, agent
 
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 BOARD_SIZE = 11
 ITER_NUM = 100000
@@ -26,13 +24,14 @@ LAMBDA = 0.8
 BASE_LEARNING_RATE = 0.01
 BOARD_HISTORY_LIMIT = 1000
 BOARD_HISTORY_BASE_NUM = 1024
-DISPLAY_INTERVAL = 100
+DISPLAY_INTERVAL = 20
 
 pos_map = np.array(range(BOARD_SIZE * BOARD_SIZE)).reshape((BOARD_SIZE, BOARD_SIZE))
 
 
 def get_available_pos(board):
     return pos_map[board.sum(-1) == 0]
+
 
 def get_reward(game):
     if not game.is_over():
@@ -44,11 +43,11 @@ def get_reward(game):
     else:
         return WIN_REWARD
 
+
 def main():
 
     game = engine.GomokuEngine(board_size=BOARD_SIZE)
     player = agent.Agent()
-
 
     global_step = slim.get_or_create_global_step()
     learning_rate = tf.train.exponential_decay(
@@ -77,8 +76,7 @@ def main():
             while True:
                 board = game.get_board().copy()
                 if game.get_actor() == 1:
-                    board = board[:,:,::-1]
-                print(board.sum(-1))
+                    board = board[:, :, ::-1]
                 board_history.append(board)
                 available_pos = get_available_pos(game.get_board())
                 action = agent.Agent.trans_pos(np.random.choice(available_pos), BOARD_SIZE)
@@ -137,14 +135,14 @@ def main():
                 score_map = one_game_score_map[_st]
                 one_game_train_data.append(board)
                 if _st < step_num - 2:
-                    Q = reward - GAMMA1 * one_game_reward[_st + 1] + GAMMA2 * one_game_reward[_st + 2]
+                    q = reward - GAMMA1 * one_game_reward[_st + 1] + GAMMA2 * one_game_reward[_st + 2]
                 elif _st == (step_num - 2):
                     # 倒数第二步
-                    Q = reward - GAMMA1 * one_game_reward[_st + 1]
+                    q = reward - GAMMA1 * one_game_reward[_st + 1]
                 else:
                     # 最后一步
-                    Q = reward
-                score_map[action] = LAMBDA * score_map[action] + (1 - LAMBDA) * Q
+                    q = reward
+                score_map[action] = LAMBDA * score_map[action] + (1 - LAMBDA) * q
                 one_game_train_label.append(score_map)
 
             # 注意，这里默认我们每次一局产生的数据小于BATCH的大小
@@ -167,7 +165,7 @@ def main():
                     rival_game_idx.append(game_idx)
 
             # 第二步
-            hist_2rd_data = [game_list[k].get_board()[:,:,::-1] for k in rival_game_idx]
+            hist_2rd_data = [game_list[k].get_board()[:, :, ::-1] for k in rival_game_idx]
             rival_actions, rival_scores, _ = player.make_predict(hist_2rd_data, sess)
 
             my_game_idx = []
@@ -190,9 +188,8 @@ def main():
 
             history_train_label = score_maps
             for idx in range(len(history_train_label)):
-                Q = history_reward[idx, 0] - GAMMA1 * history_reward[idx, 1] + GAMMA2 * history_reward[idx, 2]
-                history_train_label[actions[idx]] = LAMBDA * history_train_label[actions[idx]] \
-                                                    + (1 - LAMBDA) * Q
+                q = history_reward[idx, 0] - GAMMA1 * history_reward[idx, 1] + GAMMA2 * history_reward[idx, 2]
+                history_train_label[actions[idx]] = LAMBDA * history_train_label[actions[idx]] + (1 - LAMBDA) * q
             board_history.extend(one_game_train_data)
             for _ in range(len(board_history) - BOARD_HISTORY_LIMIT):
                 board_history.pop(0)
