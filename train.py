@@ -75,16 +75,16 @@ def main():
         while len(board_history) < BOARD_HISTORY_BASE_NUM:
             game.reset()
             while True:
+                board = game.get_board().copy()
+                if game.get_actor() == 1:
+                    board = board[:,:,::-1]
+                print(board.sum(-1))
+                board_history.append(board)
                 available_pos = get_available_pos(game.get_board())
                 action = agent.Agent.trans_pos(np.random.choice(available_pos), BOARD_SIZE)
                 game.make_move(action)
                 if game.is_over():
-                    # game.display()
                     break
-                board = game.get_board().copy()
-                if game.get_actor() == 1:
-                    board = board[:,:,::-1]
-                board_history.append(board)
 
         game_list = [engine.GomokuEngine(board_size=BOARD_SIZE) for _ in range(BATCH_SIZE)]
 
