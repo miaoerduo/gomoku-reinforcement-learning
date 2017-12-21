@@ -13,8 +13,8 @@ from gomoku import engine, agent
 
 
 BOARD_SIZE = 11
-ITER_NUM = 10000
-SAVE_INTERVAL = 1000
+ITER_NUM = 100000
+SAVE_INTERVAL = 10000
 BATCH_SIZE = 1024
 WIN_REWARD = 10
 LOSS_REWARD = -20
@@ -26,6 +26,7 @@ LAMBDA = 0.8
 BASE_LEARNING_RATE = 0.01
 BOARD_HISTORY_LIMIT = 1000
 BOARD_HISTORY_BASE_NUM = 1024
+DISPLAY_INTERVAL = 100
 
 pos_map = np.array(range(BOARD_SIZE * BOARD_SIZE)).reshape((BOARD_SIZE, BOARD_SIZE))
 
@@ -44,8 +45,6 @@ def get_reward(game):
         return WIN_REWARD
 
 def main():
-
-
 
     game = engine.GomokuEngine(board_size=BOARD_SIZE)
     player = agent.Agent()
@@ -80,7 +79,7 @@ def main():
                 action = agent.Agent.trans_pos(np.random.choice(available_pos), BOARD_SIZE)
                 game.make_move(action)
                 if game.is_over():
-                    game.display()
+                    # game.display()
                     break
                 board = game.get_board().copy()
                 if game.get_actor() == 1:
@@ -90,8 +89,9 @@ def main():
         game_list = [engine.GomokuEngine(board_size=BOARD_SIZE) for _ in range(BATCH_SIZE)]
 
         for step in range(ITER_NUM):
-            train_data = []
-            train_label = []
+
+            if (step % SAVE_INTERVAL) == 0:
+                saver.save(sess, './models/gomoku', global_step=step)
 
             # 每次迭代进行一次完整的游戏模拟，之后从历史数据中找到预测结果
 
@@ -122,7 +122,8 @@ def main():
                 one_game_reward.append(reward)
 
                 if game.is_over():
-                    game.display()
+                    if (step % DISPLAY_INTERVAL) == 0:
+                        game.display()
                     break
 
             # 构造样本
@@ -198,8 +199,10 @@ def main():
 
             one_game_train_data.extend(history_train_data)
             one_game_train_label.extend(history_train_label)
-
-            player.train(one_game_train_data, one_game_train_label, sess, display=True)
+            if (step % DISPLAY_INTERVAL) == 0:
+                player.train(one_game_train_data, one_game_train_label, sess, display=True)
+            else:
+                player.train(one_game_train_data, one_game_train_label, sess, display=False)
 
 
 
