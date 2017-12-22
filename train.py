@@ -24,7 +24,7 @@ LAMBDA = 0.8
 BASE_LEARNING_RATE = 0.01
 BOARD_HISTORY_LIMIT = 1000
 BOARD_HISTORY_BASE_NUM = 1024
-DISPLAY_INTERVAL = 20
+DISPLAY_INTERVAL = 1
 
 pos_map = np.array(range(BOARD_SIZE * BOARD_SIZE)).reshape((BOARD_SIZE, BOARD_SIZE))
 
@@ -196,10 +196,9 @@ def main():
 
             one_game_train_data.extend(history_train_data)
             one_game_train_label.extend(history_train_label)
+            lr, loss = player.train(one_game_train_data, one_game_train_label, sess)
             if (step % DISPLAY_INTERVAL) == 0:
-                player.train(one_game_train_data, one_game_train_label, sess, display=True)
-            else:
-                player.train(one_game_train_data, one_game_train_label, sess, display=False)
+                print('step: {}  lr: {}  loss: {}'.format(step, lr, loss))
 
 if __name__ == '__main__':
     main()

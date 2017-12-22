@@ -8,12 +8,10 @@ class GomokuEngine(object):
     五子棋游戏引擎，可以完成五子棋的各种状态的模拟，包含了棋盘，落子，胜利等数据
     """
 
-    def __init__(self, board_size, board=None, actor=0):
+    def __init__(self, board_size, board=None):
         """
         构造函数
         :param board_size:  棋盘大小
-        :param board:       棋盘
-        :param actor:       玩家id
         """
         self._board = None
         self._board_size = None
@@ -23,15 +21,16 @@ class GomokuEngine(object):
         self._winner = -1
         self._is_over = False
         self._available = None
-        self.reset(board_size, board, actor)
+        self.reset(board_size, board)
 
-    def reset(self, board_size=None, board=None, copy=False, is_over=False):
+    def reset(self, board_size=None, board=None, copy=False, is_over=False, winner=-1):
         """
         重置游戏状态，为了简化初始化操作，不进行游戏是否终止的判定
-        :param board_size:
-        :param board:
-        :param always1st:
-        :param actor
+        :param board_size:  棋盘大小
+        :param board:       棋盘
+        :param copy:        引用或是拷贝棋盘
+        :param is_over:     游戏是否结束(reset不自动检查)
+        :param winner:      获胜玩家(reset不自动检查)
         :return:
         """
         if board_size is not None:
@@ -45,8 +44,8 @@ class GomokuEngine(object):
         self._available = (self._board.sum(-1) == 0)
         self._actor = 0 if self._board[:,:,0].sum() == self._board[:,:,1].sum() else 1
         self._history = []
-        self._winner = -1
-        self._is_over = False
+        self._winner = winner
+        self._is_over = is_over
         return self._check_shape()
 
     def _check_shape(self):
@@ -62,8 +61,8 @@ class GomokuEngine(object):
 
     def make_move(self, action):
         """
-        移动
-        :param action:
+        落子
+        :param action:  元组，表示落子的位置
         :return:
         """
 
@@ -90,7 +89,7 @@ class GomokuEngine(object):
     def _is_win(self, actor):
         """
         玩家是否获胜
-        :param actor:
+        :param actor:   玩家id，简化判断的复杂度
         :return:
         """
         # 行
@@ -108,6 +107,7 @@ class GomokuEngine(object):
                 if (vertical == 1).all():
                     return True
 
+        # 斜线方向
         for row in range(self._board_size - 4):
             for col in range(self._board_size - 4):
 
@@ -122,15 +122,15 @@ class GomokuEngine(object):
                     return True
         return False
 
-
     def undo(self, step=1):
         """
         悔棋
-        :param step:
+        :param step:    悔棋的步数
         :return:
         """
         if step != 0 and len(self._history) > 0:
             self._winner = -1
+            self._is_over = False
 
         while step != 0 and len(self._history) > 0:
             undo_action, undo_actor = self._history.pop()
@@ -141,10 +141,10 @@ class GomokuEngine(object):
 
     def display(self):
         """
-        打印棋谱
+        根据历史记录打印棋谱，如果是通过reset的棋盘，则可能没有完整的历史，打印会有问题
         :return:
         """
-        display_board = - np.zeros((self._board_size, self._board_size), np.int32)
+        display_board = np.zeros((self._board_size, self._board_size), np.int32)
 
         step = 1
         for action, actor in self._history:
@@ -189,8 +189,16 @@ class GomokuEngine(object):
         return self._winner
 
     def get_available(self):
+        """
+        获取棋盘可用的区域，返回棋盘相同大小的bool矩阵，True表示可以落子
+        :return:
+        """
         return self._available
 
     def is_over(self):
+        """
+        游戏是否结束
+        :return:
+        """
         return self._is_over
 
